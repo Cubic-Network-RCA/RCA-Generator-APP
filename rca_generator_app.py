@@ -1,9 +1,12 @@
 import streamlit as st
 import openai
-import os
 
-# Set your OpenAI API key from Streamlit secrets
-client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+# Azure OpenAI credentials – TEMPORARY for internal testing ONLY
+client = openai.AzureOpenAI(
+    api_key=os.getenv("AZURE_OPENAI_API_KEY"),
+    azure_endpoint="https://vibic3.openai.azure.com/",
+    api_version="2024-02-15-preview"
+)
 
 st.set_page_config(page_title="AI-Powered RCA Generator")
 st.title("🚨 Major Incident RCA Generator")
@@ -40,7 +43,7 @@ Timeline:
 """
             try:
                 response = client.chat.completions.create(
-                    model="gpt-4",
+                    model="gpt-4.1",  # Use the appropriate deployment name from your Azure portal if needed
                     messages=[
                         {"role": "system", "content": "You are an expert in writing RCA reports for network incidents."},
                         {"role": "user", "content": prompt}
@@ -52,4 +55,7 @@ Timeline:
                 st.success("✅ RCA Generated Successfully!")
                 st.text_area("📄 Generated RCA", value=rca_output, height=500)
             except Exception as e:
-                st.error(f"Error generating RCA: {e}")
+                st.error(f"❌ Error generating RCA: {e}")
+
+st.markdown("---")
+st.markdown("Developed for Cubic AI Day 2025 ✨")
