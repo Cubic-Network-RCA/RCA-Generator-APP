@@ -1,5 +1,6 @@
 import streamlit as st
 import openai
+import os
 
 # Azure OpenAI credentials – TEMPORARY for internal testing ONLY
 client = openai.AzureOpenAI(
