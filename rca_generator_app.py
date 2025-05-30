@@ -2,12 +2,14 @@ import streamlit as st
 import openai
 import os
 
-# Azure OpenAI credentials – TEMPORARY for internal testing ONLY
+# Azure OpenAI credentials (safely read from Streamlit secrets)
 client = openai.AzureOpenAI(
+    azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT", "https://vibic3.openai.azure.com/"),
     api_key=os.getenv("AZURE_OPENAI_API_KEY"),
-    azure_endpoint="https://vibic3.openai.azure.com/",
-    api_version="2024-02-15-preview"
+    api_version="2025-01-01-preview"  # per your company config
 )
+
+DEPLOYMENT_NAME = os.getenv("DEPLOYMENT_NAME", "gpt-4.1-nano")
 
 st.set_page_config(page_title="AI-Powered RCA Generator")
 st.title("🚨 Major Incident RCA Generator")
@@ -42,14 +44,16 @@ You are a network operations engineer. Based on the following incident timeline,
 Timeline:
 {timeline.strip()}
 """
+
             try:
                 response = client.chat.completions.create(
-                    model="gpt-4.1",  # Use the appropriate deployment name from your Azure portal if needed
+                    model=DEPLOYMENT_NAME,
                     messages=[
                         {"role": "system", "content": "You are an expert in writing RCA reports for network incidents."},
                         {"role": "user", "content": prompt}
                     ],
-                    temperature=0.3
+                    temperature=0.3,
+                    max_tokens=800
                 )
 
                 rca_output = response.choices[0].message.content
