@@ -17,7 +17,7 @@ st.set_page_config(page_title="AI-Powered RCA Generator")
 st.title("🚨 Major Incident RCA Generator")
 
 st.markdown("""
-Paste your **incident timeline** below. This tool will analyze the events and generate a full RCA in your company's official format.
+Paste your **incident timeline** below. This tool will analyze the events and generate a full RCA in Cubic's official format.
 """)
 
 # === Input Box ===
