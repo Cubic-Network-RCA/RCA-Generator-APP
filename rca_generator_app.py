@@ -1,4 +1,4 @@
-import streamlit as s
+import streamlit as st
 import openai
 import os
 from fpdf import FPDF
