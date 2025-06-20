@@ -1,10 +1,12 @@
 import streamlit as st
 import openai
 import os
+import requests
+from requests.auth import HTTPBasicAuth
 from fpdf import FPDF
 import tempfile
 
-# === Azure OpenAI Client Setup ===
+# Azure OpenAI credentials
 client = openai.AzureOpenAI(
     azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT", "https://vibic3.openai.azure.com/"),
     api_key=os.getenv("AZURE_OPENAI_API_KEY"),
@@ -12,23 +14,62 @@ client = openai.AzureOpenAI(
 )
 DEPLOYMENT_NAME = os.getenv("DEPLOYMENT_NAME", "gpt-4.1-nano")
 
-# === App UI ===
+# Jira fetch function
+def fetch_jira_description(ticket_id: str) -> str:
+    base_url = os.getenv("JIRA_BASE_URL")
+    email = os.getenv("JIRA_EMAIL")
+    token = os.getenv("JIRA_API_TOKEN")
+
+    url = f"{base_url}/rest/api/3/issue/{ticket_id}"
+    headers = {
+        "Accept": "application/json"
+    }
+
+    response = requests.get(
+        url,
+        headers=headers,
+        auth=HTTPBasicAuth(email, token)
+    )
+
+    if response.status_code == 200:
+        data = response.json()
+        desc_field = data["fields"]["description"]
+        timeline = ""
+
+        for block in desc_field.get("content", []):
+            for content in block.get("content", []):
+                if content.get("type") == "text":
+                    timeline += content.get("text", "") + "\n"
+
+        return timeline.strip()
+    else:
+        raise Exception(f"Failed to fetch Jira ticket: {response.status_code} – {response.text}")
+
+# Streamlit UI
 st.set_page_config(page_title="AI-Powered RCA Generator")
 st.title("🚨 Major Incident RCA Generator")
 
-st.markdown("""
-Paste your **incident timeline** below. This tool will analyze the events and generate a full RCA in Cubic's official format.
-""")
+st.markdown("Paste a timeline manually **or** fetch it from Jira:")
 
-# === Input Box ===
-timeline = st.text_area("📋 Paste Timeline Here", height=300)
+# Manual input
+timeline = st.text_area("📋 Paste Timeline Here (optional)", height=300)
 
-# === RCA Result Placeholder ===
+# Jira ticket input
+ticket_id = st.text_input("🔗 Or enter Jira Ticket ID (e.g., INC-2659)")
+
+if st.button("Fetch Timeline from Jira"):
+    try:
+        timeline = fetch_jira_description(ticket_id)
+        st.success("✅ Timeline fetched from Jira!")
+        st.text_area("📄 Fetched Timeline", value=timeline, height=300)
+    except Exception as e:
+        st.error(f"❌ Error: {str(e)}")
+
 rca_output = ""
 
 if st.button("Generate RCA"):
     if not timeline.strip():
-        st.warning("Please paste a timeline before generating the RCA.")
+        st.warning("Please provide a timeline.")
     else:
         with st.spinner("Generating RCA..."):
             prompt = f"""
@@ -62,7 +103,7 @@ Timeline:
                 )
                 rca_output = response.choices[0].message.content
 
-                # Remove footer if it exists
+                # Clean up output
                 for footer in ["**Prepared by:**", "**Position:**", "**Date:**"]:
                     if footer in rca_output:
                         rca_output = rca_output.split(footer)[0].strip()
@@ -73,7 +114,7 @@ Timeline:
             except Exception as e:
                 st.error(f"❌ Error generating RCA: {e}")
 
-# === PDF Download Button ===
+# PDF generation
 def generate_pdf(text: str) -> str:
     pdf = FPDF()
     pdf.add_page()
@@ -96,4 +137,4 @@ if rca_output:
         )
 
 st.markdown("---")
-st.markdown("Code Author: Devanshu Anand")
+st.markdown("Developed for Cubic AI Day 2025 ✨")
